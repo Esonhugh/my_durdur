@@ -1,0 +1,5 @@
+{
+    "files.associations": {
+        "libbpf_common.h": "c"
+    }
+}
