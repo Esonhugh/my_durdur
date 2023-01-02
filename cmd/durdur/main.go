@@ -16,6 +16,7 @@ func main() {
 			DetachCmd(),
 			DropCmd(),
 			UndropCmd(),
+			LogCmd(),
 		},
 	}
 
