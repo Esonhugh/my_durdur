@@ -40,8 +40,6 @@ func DropLog() error {
 	return nil
 }
 
-var FromOrTo [2]string = [2]string{"to", "from"}
-
 func LooplyReadRecords(rd *ringbuf.Reader) {
 	var CurrentRecord generated.BpfMyEvent
 
@@ -59,10 +57,7 @@ func LooplyReadRecords(rd *ringbuf.Reader) {
 			log.Printf("parsing ringbuf event: %s", err)
 			continue
 		}
-		if CurrentRecord.Direction == 0 || CurrentRecord.Direction == 1 {
-			log.Printf("Dropped Packect %v %v ", FromOrTo[CurrentRecord.Direction], intToIP(CurrentRecord.Addr))
-		} else {
-			log.Printf("Fail Read")
-		}
+
+		log.Printf("Dropped Packect from %v to %v ", intToIP(CurrentRecord.Saddr), intToIP(CurrentRecord.Daddr))
 	}
 }

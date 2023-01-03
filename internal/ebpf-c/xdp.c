@@ -33,8 +33,8 @@ typedef __u8 u8;
 
 struct my_event
 {
-	u32 addr;
-	u8 direction;
+	u32 saddr;
+	u32 daddr;
 }; 
 const struct my_event *unused __attribute__((unused));
 
@@ -60,22 +60,20 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
 		return XDP_PASS;
 	}
 
-	__u16 direct;
-	__u32 addr = iph->daddr;
-	value = bpf_map_lookup_elem(&drop_to_addrs, &addr);
+	__u32 saddr = iph->daddr;
+	__u32 daddr = iph->saddr;
+	
+	value = bpf_map_lookup_elem(&drop_to_addrs, &saddr);
 	if (value)
 	{
 		*value += 1;
-		direct = (u8)0;
 		goto DROPPER;
 	}
 
-	addr = iph->saddr;
-	value = bpf_map_lookup_elem(&drop_from_addrs, &addr);
+	value = bpf_map_lookup_elem(&drop_from_addrs, &daddr);
 	if (value)
 	{
 		*value += 1;
-		direct = (u8)(1) ;
 		goto DROPPER;
 	}
 
@@ -89,8 +87,8 @@ DROPPER:
 		// bpf_printk("Report Error");
 		return XDP_DROP;
 	}
-	report->addr = addr;
-	report->direction = direct;
+	report->saddr = saddr;
+	report->daddr = daddr;
 	bpf_ringbuf_submit(report, BPF_RB_FORCE_WAKEUP);
 	return XDP_DROP;
 }
