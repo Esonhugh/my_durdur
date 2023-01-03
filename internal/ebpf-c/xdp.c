@@ -83,13 +83,15 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
 
 DROPPER:
 	report = bpf_ringbuf_reserve(&event_report_area, sizeof(struct my_event), 0);
+	// bpf_printk("Reporting");
 	if (!report)
 	{
+		// bpf_printk("Report Error");
 		return XDP_DROP;
 	}
 	report->addr = addr;
 	report->direction = direct;
-	bpf_ringbuf_submit(report, 0);
+	bpf_ringbuf_submit(report, BPF_RB_FORCE_WAKEUP);
 	return XDP_DROP;
 }
 
