@@ -260,6 +260,8 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
         tcp = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
         sport = tcp->source;
         dport = tcp->dest;
+        struct ipport sipport = { saddr, sport };
+        struct ipport dipport = { daddr, dport };
 
         value = bpf_map_lookup_elem(&drop_to_ports, &sport);
         if (value)
@@ -275,6 +277,19 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
             goto DROPPER;
         }
 
+        value = bpf_map_lookup_elem(&drop_to_ipport, &sipport);
+        if (value)
+        {
+            *value += 1;
+            goto DROPPER;
+        }
+
+        value = bpf_map_lookup_elem(&drop_from_ipport, &dipport);
+        if (value)
+        {
+            *value += 1;
+            goto DROPPER;
+        }
 
     }
 	return XDP_PASS;
