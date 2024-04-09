@@ -13,6 +13,7 @@ import (
 type EBPF struct {
 	Objects *generated.BpfObjects
 	L       link.Link
+	LTCX    link.Link
 }
 
 // New returns a new EBPF.
@@ -29,12 +30,27 @@ func (e *EBPF) Load() error {
 		return fmt.Errorf("load ebpf: %w", err)
 	}
 
-	spec.Maps["drop_from_addrs"].Pinning = ebpf.PinByName
-	spec.Maps["drop_to_addrs"].Pinning = ebpf.PinByName
-	spec.Maps["event_report_area"].Pinning = ebpf.PinByName
+	// spec.Maps["drop_from_addrs"].Pinning = ebpf.PinByName
+	// spec.Maps["drop_to_addrs"].Pinning = ebpf.PinByName
+	// spec.Maps["event_report_area"].Pinning = ebpf.PinByName
+	for k := range spec.Maps {
+		spec.Maps[k].Pinning = ebpf.PinByName
+	}
+
+	spec.Programs["tc_durdur_drop_func"].AttachType = ebpf.AttachTCXEgress
+	spec.Programs["tc_durdur_drop_func"].Type = ebpf.SkSKB
+	for _, v := range spec.Programs {
+		println(v.Name)
+		println(v.AttachType)
+		println(v.Type)
+	}
+
 	if err := spec.LoadAndAssign(e.Objects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
 			PinPath: FS,
+		},
+		Programs: ebpf.ProgramOptions{
+			LogLevel: ebpf.LogLevelInstruction,
 		},
 	}); err != nil {
 		return fmt.Errorf("load and assign: %w", err)

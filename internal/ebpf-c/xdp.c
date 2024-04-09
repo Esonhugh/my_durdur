@@ -7,6 +7,8 @@
 #include <linux/ip.h>
 #include <linux/udp.h>
 #include <linux/tcp.h>
+#include <linux/pkt_cls.h>
+#include <linux/swab.h>
 
 #include <string.h>
 #include <stdarg.h>
@@ -169,21 +171,21 @@ struct my_event
 };
 const struct my_event *unused __attribute__((unused));
 
-SEC("xdp_durdur_drop")
+SEC("xdp_durdur_drop") // Ingress
 int xdp_durdur_drop_func(struct xdp_md *ctx)
 {
-	struct my_event *report;
 
+	struct my_event *report;
     void *data = (void *)(long)ctx->data;
     void *data_end = (void *)(long)ctx->data_end;
 
-    if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) > data_end)
-    {
-    		return XDP_PASS;
-    }
-
+	// not ip packet
     struct ethhdr *eth = data;
     if (eth->h_proto != bpf_htons(ETH_P_IP)) {
+    		return XDP_PASS;
+    }
+    if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) > data_end)
+    {
     		return XDP_PASS;
     }
 
@@ -197,12 +199,6 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
 	// Drop IP First
 	{
         long *value;
-        value = bpf_map_lookup_elem(&drop_to_addrs, &saddr);
-	    if (value)
-	    {
-		    *value += 1;
-		    goto DROPPER;
-	    }
 
 	    value = bpf_map_lookup_elem(&drop_from_addrs, &daddr);
 	    if (value)
@@ -260,15 +256,8 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
         tcp = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
         sport = tcp->source;
         dport = tcp->dest;
-        struct ipport sipport = { saddr, sport };
+        // struct ipport sipport = { saddr, sport };
         struct ipport dipport = { daddr, dport };
-
-        value = bpf_map_lookup_elem(&drop_to_ports, &sport);
-        if (value)
-        {
-            *value += 1;
-            goto DROPPER;
-        }
 
         value = bpf_map_lookup_elem(&drop_from_ports, &dport);
         if (value)
@@ -277,12 +266,6 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
             goto DROPPER;
         }
 
-        value = bpf_map_lookup_elem(&drop_to_ipport, &sipport);
-        if (value)
-        {
-            *value += 1;
-            goto DROPPER;
-        }
 
         value = bpf_map_lookup_elem(&drop_from_ipport, &dipport);
         if (value)
@@ -309,6 +292,73 @@ DROPPER:
 	report->query = query;
 	bpf_ringbuf_submit(report, BPF_RB_FORCE_WAKEUP);
 	return XDP_DROP;
+}
+
+SEC("tc_durdur_drop")
+int tc_durdur_drop_func(struct __sk_buff *skb) {
+	void* data = (void *)(long) skb->data;
+	void* data_end = (void *)(long) skb->data_end;
+	struct ethhdr *eth = data;
+	struct my_event *report;
+
+    if (data + sizeof(struct ethhdr) > data_end) {
+        return TC_ACT_SHOT;
+	}
+
+	if (!(eth->h_proto ==  ___constant_swab16(ETH_P_IP))) {
+		return TC_ACT_OK;
+	}
+
+	// on Egress
+	__u32 saddr = skb->local_ip4;
+	__u16 sport = skb->local_port;
+	__u32 daddr = skb->remote_ip4;
+	__u16 dport = skb->remote_port;
+    long *value;
+    struct tcphdr *tcp;
+    if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr) > data_end)
+    {
+            return XDP_PASS;
+    }
+    tcp = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
+    sport = tcp->source;
+    dport = tcp->dest;
+    // struct ipport sipport = { saddr, sport };
+    struct ipport dipport = { daddr, dport };
+        
+		value = bpf_map_lookup_elem(&drop_to_addrs, &daddr);
+	    if (value)
+	    {
+		    *value += 1;
+		    goto TC_DROP;
+	    }
+        value = bpf_map_lookup_elem(&drop_to_ports, &dport);
+        if (value)
+        {
+            *value += 1;
+            goto TC_DROP;
+        }
+        value = bpf_map_lookup_elem(&drop_to_ipport, &dipport);
+        if (value)
+        {
+            *value += 1;
+            goto TC_DROP;
+        }
+	
+TC_DROP:
+	report = bpf_ringbuf_reserve(&event_report_area, sizeof(struct my_event), 0);
+	// bpf_printk("Reporting");
+	if (!report)
+	{
+		// bpf_printk("Report Error");
+		return TC_ACT_SHOT;
+	}
+	report->saddr = saddr;
+	report->sport = sport;
+	report->daddr = daddr;
+	report->dport = dport;
+	bpf_ringbuf_submit(report, BPF_RB_FORCE_WAKEUP);
+	return TC_ACT_SHOT;
 }
 
 char _license[] SEC("license") = "GPL";
