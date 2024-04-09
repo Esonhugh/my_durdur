@@ -29,19 +29,41 @@ func DropLog() error {
 	}
 	defer e.Close()
 
-	rd, err := ringbuf.NewReader(e.Objects.EventReportArea)
+	rd, err := ringbuf.NewReader(e.XDPObjects.XdpEventReportArea)
 	if err != nil {
 		return errors.New("ebpf ringbuf reader init fail: " + err.Error())
 	}
 	defer rd.Close()
 	log.Println("Starting Log....")
-	LooplyReadRecords(rd)
+	LooplyReadXDPRecords(rd)
 
 	return nil
 }
 
-func LooplyReadRecords(rd *ringbuf.Reader) {
-	var CurrentRecord generated.BpfMyEvent
+func LooplyReadXDPRecords(rd *ringbuf.Reader) {
+	var CurrentRecord generated.XDPBpfXdpEvent
+
+	for {
+		record, err := rd.Read()
+		if err != nil {
+			if errors.Is(err, ringbuf.ErrClosed) {
+				log.Println("received signal, exiting..")
+				return
+			}
+			log.Printf("reading from reader: %s", err)
+			continue
+		}
+		if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &CurrentRecord); err != nil {
+			log.Printf("parsing ringbuf event: %s", err)
+			continue
+		}
+
+		log.Printf("Dropped Packect from %v to %v ", intToIP(CurrentRecord.Saddr), intToIP(CurrentRecord.Daddr))
+	}
+}
+
+func LooplyReadTCRecords(rd *ringbuf.Reader) {
+	var CurrentRecord generated.TCBpfTcEvent
 
 	for {
 		record, err := rd.Read()

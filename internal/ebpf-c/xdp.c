@@ -153,6 +153,9 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
     void *data = (void *)(long)ctx->data;
     void *data_end = (void *)(long)ctx->data_end;
 
+	if (data + sizeof(struct ethhdr) > data_end ) {
+		return XDP_PASS;
+	}
 	// not ip packet
     struct ethhdr *eth = data;
     if (eth->h_proto != bpf_htons(ETH_P_IP)) {
@@ -168,7 +171,7 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
 	__u16 sport = 0;
 	__u32 daddr = ip->saddr;
 	__u16 dport = 0;
-	struct dnsquery query = {0};
+	struct dnsquery query = {0x00};
 
 	// Drop IP First
 	{

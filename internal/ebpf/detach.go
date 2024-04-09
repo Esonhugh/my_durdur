@@ -17,32 +17,22 @@ func Detach() error {
 
 // Detach unpins and closes FS and maps.
 func (e *EBPF) Detach() error {
-	if err := e.L.Unpin(); err != nil {
+	if err := e.XDPLink.Unpin(); err != nil {
 		return fmt.Errorf("detach the link: %w", err)
 	}
 
-	if err := e.L.Close(); err != nil {
+	if err := e.XDPObjects.Close(); err != nil {
 		return fmt.Errorf("close the link: %w", err)
 	}
 
-	if err := e.Objects.BpfMaps.DropFromAddrs.Unpin(); err != nil {
+	if err := e.XDPObjects.XDPBpfMaps.DropFromAddrs.Unpin(); err != nil {
 		return fmt.Errorf("detach %s map: %w",
-			e.Objects.BpfMaps.DropFromAddrs.String(), err)
+			e.XDPObjects.XDPBpfMaps.DropFromAddrs.String(), err)
 	}
 
-	if err := e.Objects.BpfMaps.DropFromAddrs.Close(); err != nil {
+	if err := e.XDPObjects.XDPBpfMaps.DropFromAddrs.Close(); err != nil {
 		return fmt.Errorf("detach %s map: %w",
-			e.Objects.BpfMaps.DropFromAddrs.String(), err)
-	}
-
-	if err := e.Objects.BpfMaps.DropToAddrs.Unpin(); err != nil {
-		return fmt.Errorf("close %s map: %w",
-			e.Objects.BpfMaps.DropToAddrs.String(), err)
-	}
-
-	if err := e.Objects.BpfMaps.DropToAddrs.Close(); err != nil {
-		return fmt.Errorf("close %s map: %w",
-			e.Objects.BpfMaps.DropToAddrs.String(), err)
+			e.XDPObjects.XDPBpfMaps.DropFromAddrs.String(), err)
 	}
 
 	return nil

@@ -11,21 +11,23 @@ import (
 
 // EBPF keeps eBPF Objects(BpfPrograms, BpfMaps) and Link.
 type EBPF struct {
-	Objects *generated.BpfObjects
-	L       link.Link
-	LTCX    link.Link
+	XDPObjects *generated.XDPBpfObjects
+	XDPLink    link.Link
+	TCObjects  *generated.TCBpfObjects
+	TCLink     link.Link
 }
 
 // New returns a new EBPF.
 func New() *EBPF {
 	return &EBPF{
-		Objects: &generated.BpfObjects{},
+		XDPObjects: &generated.XDPBpfObjects{},
+		TCObjects:  &generated.TCBpfObjects{},
 	}
 }
 
 // Load loads pre-compiled eBPF program.
 func (e *EBPF) Load() error {
-	spec, err := generated.LoadBpf()
+	spec, err := generated.LoadXDPBpf()
 	if err != nil {
 		return fmt.Errorf("load ebpf: %w", err)
 	}
@@ -37,15 +39,7 @@ func (e *EBPF) Load() error {
 		spec.Maps[k].Pinning = ebpf.PinByName
 	}
 
-	spec.Programs["tc_durdur_drop_func"].AttachType = ebpf.AttachTCXEgress
-	spec.Programs["tc_durdur_drop_func"].Type = ebpf.SkSKB
-	for _, v := range spec.Programs {
-		println(v.Name)
-		println(v.AttachType)
-		println(v.Type)
-	}
-
-	if err := spec.LoadAndAssign(e.Objects, &ebpf.CollectionOptions{
+	if err := spec.LoadAndAssign(e.XDPObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
 			PinPath: FS,
 		},
@@ -61,14 +55,14 @@ func (e *EBPF) Load() error {
 
 // Close cleans all resources.
 func (e *EBPF) Close() error {
-	if e.Objects != nil {
-		if err := e.Objects.Close(); err != nil {
+	if e.XDPObjects != nil {
+		if err := e.XDPObjects.Close(); err != nil {
 			return err
 		}
 	}
 
-	if e.L != nil {
-		if err := e.L.Close(); err != nil {
+	if e.XDPLink != nil {
+		if err := e.XDPLink.Close(); err != nil {
 			return err
 		}
 	}

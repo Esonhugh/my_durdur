@@ -69,27 +69,32 @@ SEC("tc_durdur_drop")
 int tc_durdur_drop_func(struct __sk_buff *skb) {
 	void* data = (void *)(long) skb->data;
 	void* data_end = (void *)(long) skb->data_end;
-	struct ethhdr *eth = data;
 	struct tc_event *report;
 
     if (data + sizeof(struct ethhdr) > data_end) {
         return TC_ACT_SHOT;
 	}
 
-	if (!(eth->h_proto ==  ___constant_swab16(ETH_P_IP))) {
+	struct ethhdr *eth = data;
+	if (eth->h_proto !=  bpf_htons(ETH_P_IP)) {
 		return TC_ACT_OK;
 	}
 
+    if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) > data_end) {
+        return TC_ACT_OK;
+    }
 	// on Egress
-	__u32 saddr = skb->local_ip4;
-	__u16 sport = skb->local_port;
-	__u32 daddr = skb->remote_ip4;
-	__u16 dport = skb->remote_port;
+    struct iphdr *ip = data + sizeof(struct ethhdr);
+	__u32 saddr = ip->daddr;
+	__u16 sport = 0;
+	__u32 daddr = ip->saddr;
+	__u16 dport = 0;
+    
     long *value;
     struct tcphdr *tcp;
     if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr) > data_end)
     {
-            return XDP_PASS;
+            return TC_ACT_OK;
     }
     tcp = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
     sport = tcp->source;
@@ -115,6 +120,9 @@ int tc_durdur_drop_func(struct __sk_buff *skb) {
             *value += 1;
             goto TC_DROP;
         }
+
+	// not match don't drop
+	return TC_ACT_OK;
 	
 TC_DROP:
 	report = bpf_ringbuf_reserve(&tc_event_report_area, sizeof(struct tc_event), 0);

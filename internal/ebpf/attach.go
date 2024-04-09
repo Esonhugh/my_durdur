@@ -32,34 +32,32 @@ func (e *EBPF) Attach(iface *net.Interface) error {
 			"%w: %s", ErrAlreadyAttached, iface.Name,
 		)
 	}
-
+	fmt.Println("trying to attach XDP")
 	l, err := link.AttachXDP(link.XDPOptions{
-		Program:   e.Objects.XdpDurdurDropFunc,
+		Program:   e.XDPObjects.XdpDurdurDropFunc,
 		Interface: iface.Index,
 	})
 	if err != nil {
 		return err
 	}
+	if err := l.Pin(e.linkPinFile()); err != nil {
+		return err
+	}
+	e.XDPLink = l
 
+	fmt.Println("trying to attach TC")
 	l2, err := link.AttachTCX(link.TCXOptions{
-		Program:   e.Objects.TcDurdurDropFunc,
+		Program:   e.TCObjects.TcDurdurDropFunc,
 		Interface: iface.Index,
 		Attach:    ebpf.AttachTCXEgress,
 	})
 	if err != nil {
 		return err
 	}
-
-	if err := l.Pin(e.linkPinFile()); err != nil {
-		return err
-	}
-
 	if err := l2.Pin(e.linkPinnedTCXFile()); err != nil {
 		return err
 	}
-
-	e.L = l
-	e.LTCX = l2
+	e.TCLink = l2
 	return nil
 }
 
@@ -74,8 +72,8 @@ func (e *EBPF) LoadAttachedLink() error {
 		return fmt.Errorf("%s: %w", err, ErrAlreadyAttached)
 	}
 
-	e.L = l
-	e.LTCX = l2
+	e.XDPLink = l
+	e.TCLink = l2
 	return nil
 }
 
