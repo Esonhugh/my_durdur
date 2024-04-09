@@ -13,14 +13,16 @@
 #include <string.h>
 #include <stdarg.h>
 
+typedef __u32 u32;
+typedef __u8 u8;
+typedef __u16 u16;
 
-struct
+
+struct ipport
 {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, __u32);
-	__type(value, long);
-	__uint(max_entries, 1024);
-} drop_to_addrs SEC(".maps");
+    __u32 addr;
+    __u16 port;
+} ipport ;
 
 struct
 {
@@ -36,29 +38,7 @@ struct
     __type(key, __u16);
     __type(value, long);
     __uint(max_entries, 65535);
-} drop_to_ports SEC(".maps");
-
-struct
-{
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, __u16);
-    __type(value, long);
-    __uint(max_entries, 65535);
 } drop_from_ports SEC(".maps");
-
-struct ipport
-{
-    __u32 addr;
-    __u16 port;
-} ipport ;
-
-struct
-{
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __uint(key_size, sizeof(ipport));
-    __uint(value_size, sizeof(long));
-    __uint(max_entries, 1024);
-} drop_to_ipport SEC(".maps");
 
 struct
 {
@@ -72,13 +52,7 @@ struct
 {
 	__uint(type, BPF_MAP_TYPE_RINGBUF);
 	__uint(max_entries, 1 << 24);
-} event_report_area SEC(".maps");
-
-typedef __u32 u32;
-typedef __u8 u8;
-typedef __u16 u16;
-
-#define MAX_DNS_NAME_LENGTH 128
+} xdp_event_report_area SEC(".maps");
 
 struct dnshdr
 {
@@ -99,6 +73,7 @@ struct dnshdr
 	uint16_t add_count;	 // Number of resource RRs
 };
 
+#define MAX_DNS_NAME_LENGTH 128
 struct dnsquery
 {
 	// char name[MAX_DNS_NAME_LENGTH];
@@ -160,8 +135,7 @@ static int parse_query(void *data_end, void *query_start, struct dnsquery *q)
 	return 1;
 }
 
-
-struct my_event
+struct xdp_event
 {
 	u32 saddr;
 	u16 sport;
@@ -169,13 +143,13 @@ struct my_event
 	u16 dport;
     struct dnsquery query;
 };
-const struct my_event *unused __attribute__((unused));
+const struct xdp_event *unused __attribute__((unused));
 
 SEC("xdp_durdur_drop") // Ingress
 int xdp_durdur_drop_func(struct xdp_md *ctx)
 {
 
-	struct my_event *report;
+	struct xdp_event *report;
     void *data = (void *)(long)ctx->data;
     void *data_end = (void *)(long)ctx->data_end;
 
@@ -278,7 +252,7 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
 	return XDP_PASS;
 
 DROPPER:
-	report = bpf_ringbuf_reserve(&event_report_area, sizeof(struct my_event), 0);
+	report = bpf_ringbuf_reserve(&xdp_event_report_area, sizeof(struct xdp_event), 0);
 	// bpf_printk("Reporting");
 	if (!report)
 	{
@@ -292,73 +266,6 @@ DROPPER:
 	report->query = query;
 	bpf_ringbuf_submit(report, BPF_RB_FORCE_WAKEUP);
 	return XDP_DROP;
-}
-
-SEC("tc_durdur_drop")
-int tc_durdur_drop_func(struct __sk_buff *skb) {
-	void* data = (void *)(long) skb->data;
-	void* data_end = (void *)(long) skb->data_end;
-	struct ethhdr *eth = data;
-	struct my_event *report;
-
-    if (data + sizeof(struct ethhdr) > data_end) {
-        return TC_ACT_SHOT;
-	}
-
-	if (!(eth->h_proto ==  ___constant_swab16(ETH_P_IP))) {
-		return TC_ACT_OK;
-	}
-
-	// on Egress
-	__u32 saddr = skb->local_ip4;
-	__u16 sport = skb->local_port;
-	__u32 daddr = skb->remote_ip4;
-	__u16 dport = skb->remote_port;
-    long *value;
-    struct tcphdr *tcp;
-    if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr) > data_end)
-    {
-            return XDP_PASS;
-    }
-    tcp = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
-    sport = tcp->source;
-    dport = tcp->dest;
-    // struct ipport sipport = { saddr, sport };
-    struct ipport dipport = { daddr, dport };
-        
-		value = bpf_map_lookup_elem(&drop_to_addrs, &daddr);
-	    if (value)
-	    {
-		    *value += 1;
-		    goto TC_DROP;
-	    }
-        value = bpf_map_lookup_elem(&drop_to_ports, &dport);
-        if (value)
-        {
-            *value += 1;
-            goto TC_DROP;
-        }
-        value = bpf_map_lookup_elem(&drop_to_ipport, &dipport);
-        if (value)
-        {
-            *value += 1;
-            goto TC_DROP;
-        }
-	
-TC_DROP:
-	report = bpf_ringbuf_reserve(&event_report_area, sizeof(struct my_event), 0);
-	// bpf_printk("Reporting");
-	if (!report)
-	{
-		// bpf_printk("Report Error");
-		return TC_ACT_SHOT;
-	}
-	report->saddr = saddr;
-	report->sport = sport;
-	report->daddr = daddr;
-	report->dport = dport;
-	bpf_ringbuf_submit(report, BPF_RB_FORCE_WAKEUP);
-	return TC_ACT_SHOT;
 }
 
 char _license[] SEC("license") = "GPL";

@@ -1,6 +1,6 @@
 # Generated files. Make build project or use pre-compiled binary.
-bpf_bpfel*
-bpf_bpfeb*
+*_bpfel*
+*_bpfeb*
 
 # Builds.
 build/
