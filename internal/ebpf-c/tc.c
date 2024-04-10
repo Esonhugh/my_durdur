@@ -13,28 +13,13 @@
 #include <string.h>
 #include <stdarg.h>
 
-#define MAX_DNS_NAME_LENGTH 128
-struct dnsquery
-{
-	// char name[MAX_DNS_NAME_LENGTH];
-	__u8 name[MAX_DNS_NAME_LENGTH];
-};
+#include "include/common_define.h"
 
-struct ipport
-{
-    __u32 addr;
-    __u16 port;
-} ipport ;
-
-struct tc_event
-{
-	__u32 saddr;
-	__u16 sport;
-	__u32 daddr;
-	__u16 dport;
-    struct dnsquery query;
-};
-const struct tc_event *unused __attribute__((unused));
+typedef struct ipport tc_ipport;
+UNUSED(tc_ipport);
+typedef struct report_event tc_event;
+UNUSED(tc_event);
+//const tc_event *unused __attribute__((unused));
 
 struct
 {
@@ -59,7 +44,7 @@ struct
 struct
 {
     __uint(type, BPF_MAP_TYPE_HASH);
-    __uint(key_size, sizeof(ipport));
+    __uint(key_size, sizeof(tc_ipport));
     __uint(value_size, sizeof(long));
     __uint(max_entries, 1024);
 } drop_to_ipport SEC(".maps");
@@ -69,7 +54,7 @@ SEC("tc_durdur_drop")
 int tc_durdur_drop_func(struct __sk_buff *skb) {
 	void* data = (void *)(long) skb->data;
 	void* data_end = (void *)(long) skb->data_end;
-	struct tc_event *report;
+	tc_event *report;
 
     if (data + sizeof(struct ethhdr) > data_end) {
         return TC_ACT_SHOT;
@@ -125,7 +110,7 @@ int tc_durdur_drop_func(struct __sk_buff *skb) {
 	return TC_ACT_OK;
 	
 TC_DROP:
-	report = bpf_ringbuf_reserve(&tc_event_report_area, sizeof(struct tc_event), 0);
+	report = bpf_ringbuf_reserve(&tc_event_report_area, sizeof(tc_event), 0);
 	// bpf_printk("Reporting");
 	if (!report)
 	{

@@ -12,17 +12,14 @@
 
 #include <string.h>
 #include <stdarg.h>
+#include "include/common_define.h"
 
-typedef __u32 u32;
-typedef __u8 u8;
-typedef __u16 u16;
-
-
-struct ipport
-{
-    __u32 addr;
-    __u16 port;
-} ipport ;
+typedef struct ipport xdp_ipport;
+UNUSED(xdp_ipport);
+// const xdp_ipport *unused_ipport __attribute__((unused)); // to suppress warning for
+typedef struct report_event xdp_event;
+UNUSED(xdp_event);
+// const xdp_event *unused_event __attribute__((unused)); // to suppress warning for
 
 struct
 {
@@ -43,7 +40,7 @@ struct
 struct
 {
     __uint(type, BPF_MAP_TYPE_HASH);
-    __uint(key_size, sizeof(ipport));
+    __uint(key_size, sizeof(xdp_ipport));
     __uint(value_size, sizeof(long));
     __uint(max_entries, 1024);
 } drop_from_ipport SEC(".maps");
@@ -73,12 +70,6 @@ struct dnshdr
 	uint16_t add_count;	 // Number of resource RRs
 };
 
-#define MAX_DNS_NAME_LENGTH 128
-struct dnsquery
-{
-	// char name[MAX_DNS_NAME_LENGTH];
-	u8 name[MAX_DNS_NAME_LENGTH];
-};
 
 #define MAX_ENTRIES 1024
 struct
@@ -135,21 +126,12 @@ static int parse_query(void *data_end, void *query_start, struct dnsquery *q)
 	return 1;
 }
 
-struct xdp_event
-{
-	u32 saddr;
-	u16 sport;
-	u32 daddr;
-	u16 dport;
-    struct dnsquery query;
-};
-const struct xdp_event *unused __attribute__((unused));
 
 SEC("xdp_durdur_drop") // Ingress
 int xdp_durdur_drop_func(struct xdp_md *ctx)
 {
 
-	struct xdp_event *report;
+	xdp_event *report;
     void *data = (void *)(long)ctx->data;
     void *data_end = (void *)(long)ctx->data_end;
 
@@ -255,7 +237,7 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
 	return XDP_PASS;
 
 DROPPER:
-	report = bpf_ringbuf_reserve(&xdp_event_report_area, sizeof(struct xdp_event), 0);
+	report = bpf_ringbuf_reserve(&xdp_event_report_area, sizeof(xdp_event), 0);
 	// bpf_printk("Reporting");
 	if (!report)
 	{
