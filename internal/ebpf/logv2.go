@@ -32,7 +32,7 @@ func DropLogV2() error {
 			return errors.New("ebpf ringbuf reader init fail: " + err.Error())
 		}
 		defer rd.Close()
-		EndlessLoopReadXDPRecords(rd, nil)
+		EndlessLoopReadXDPRecords(rd, Records)
 	}
 	{
 		rd, err := ringbuf.NewReader(e.TCObjects.TcEventReportArea)
@@ -40,7 +40,7 @@ func DropLogV2() error {
 			return errors.New("ebpf ringbuf reader init fail: " + err.Error())
 		}
 		defer rd.Close()
-		EndlessLoopReadTCRecords(rd, nil)
+		EndlessLoopReadTCRecords(rd, Records)
 	}
 	time.Sleep(1 * time.Second)
 	defer close(Records)
