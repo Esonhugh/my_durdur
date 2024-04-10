@@ -9,7 +9,8 @@ generate:
 	go generate ./internal/generated...
 
 compile:
-	go build -o build/durdur ./cmd/durdur
+	go build -o build/durdur ./cmd/durdur-new
+	# go build -o build/durdur ./cmd/durdur
 
 build: generate compile
 

@@ -98,5 +98,17 @@ func (e *EBPF) Close() error {
 			return err
 		}
 	}
+
+	if e.TCObjects != nil {
+		if err := e.TCObjects.Close(); err != nil {
+			return err
+		}
+	}
+
+	if e.TCLink != nil {
+		if err := e.TCLink.Close(); err != nil {
+			return err
+		}
+	}
 	return nil
 }

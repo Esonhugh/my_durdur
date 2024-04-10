@@ -1,8 +1,6 @@
 package ebpf
 
-import (
-	"fmt"
-)
+import "errors"
 
 // Detach detaches all pinned objects from the FS.
 func Detach() error {
@@ -15,25 +13,36 @@ func Detach() error {
 	return e.Detach()
 }
 
+type UnpinCloser interface {
+	Unpin() error
+	Close() error
+}
+
+func UnpinClose(e UnpinCloser) error {
+	if err := e.Unpin(); err != nil {
+		return err
+	}
+	if err := e.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Detach unpins and closes FS and maps.
 func (e *EBPF) Detach() error {
-	if err := e.XDPLink.Unpin(); err != nil {
-		return fmt.Errorf("detach the link: %w", err)
-	}
-
-	if err := e.XDPObjects.Close(); err != nil {
-		return fmt.Errorf("close the link: %w", err)
-	}
-
-	if err := e.XDPObjects.XDPBpfMaps.DropFromAddrs.Unpin(); err != nil {
-		return fmt.Errorf("detach %s map: %w",
-			e.XDPObjects.XDPBpfMaps.DropFromAddrs.String(), err)
-	}
-
-	if err := e.XDPObjects.XDPBpfMaps.DropFromAddrs.Close(); err != nil {
-		return fmt.Errorf("detach %s map: %w",
-			e.XDPObjects.XDPBpfMaps.DropFromAddrs.String(), err)
-	}
-
-	return nil
+	return errors.Join(
+		UnpinClose(e.XDPLink),
+		UnpinClose(e.TCLink),
+		UnpinClose(e.XDPObjects.XdpDurdurDropFunc),
+		UnpinClose(e.XDPObjects.DropFromAddrs),
+		UnpinClose(e.XDPObjects.DropFromPorts),
+		UnpinClose(e.XDPObjects.DropFromIpport),
+		UnpinClose(e.XDPObjects.XdpEventReportArea),
+		UnpinClose(e.TCObjects.TcDurdurDropFunc),
+		UnpinClose(e.TCObjects.DropToAddrs),
+		UnpinClose(e.TCObjects.DropToPorts),
+		UnpinClose(e.TCObjects.DropToIpport),
+		UnpinClose(e.TCObjects.TcEventReportArea),
+		e.Close(),
+	)
 }

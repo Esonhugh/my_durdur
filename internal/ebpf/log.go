@@ -4,20 +4,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"log"
-	"net"
+	"sync"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/boratanrikulu/durdur/internal/generated"
 	"github.com/cilium/ebpf/ringbuf"
 	"github.com/cilium/ebpf/rlimit"
 )
-
-func intToIP(ipNum uint32) net.IP {
-	ip := make(net.IP, 4)
-	binary.LittleEndian.PutUint32(ip, ipNum)
-	// inn.NativeEndian.PutUint32(ip, ipNum)
-	return ip
-}
 
 func DropLog() error {
 	if err := rlimit.RemoveMemlock(); err != nil {
@@ -29,14 +23,33 @@ func DropLog() error {
 	}
 	defer e.Close()
 
-	rd, err := ringbuf.NewReader(e.XDPObjects.XdpEventReportArea)
-	if err != nil {
-		return errors.New("ebpf ringbuf reader init fail: " + err.Error())
+	wg := &sync.WaitGroup{}
+	{
+		go func() {
+			wg.Add(1)
+			rd, err := ringbuf.NewReader(e.XDPObjects.XdpEventReportArea)
+			if err != nil {
+				log.Errorf("ebpf ringbuf reader init fail: %s", err)
+			}
+			defer rd.Close()
+			log.Println("Starting Log....")
+			LooplyReadXDPRecords(rd)
+			wg.Done()
+		}()
 	}
-	defer rd.Close()
-	log.Println("Starting Log....")
-	LooplyReadXDPRecords(rd)
-
+	{
+		go func() {
+			wg.Add(1)
+			rd, err := ringbuf.NewReader(e.TCObjects.TcEventReportArea)
+			if err != nil {
+				log.Errorf("ebpf ringbuf reader init fail: " + err.Error())
+			}
+			defer rd.Close()
+			go LooplyReadTCRecords(rd)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 	return nil
 }
 
@@ -58,7 +71,7 @@ func LooplyReadXDPRecords(rd *ringbuf.Reader) {
 			continue
 		}
 
-		log.Printf("Dropped Packect from %v to %v ", intToIP(CurrentRecord.Saddr), intToIP(CurrentRecord.Daddr))
+		log.Printf("Dropped Packect from %v to %v ", int2ip(CurrentRecord.Saddr), int2ip(CurrentRecord.Daddr))
 	}
 }
 
@@ -80,6 +93,6 @@ func LooplyReadTCRecords(rd *ringbuf.Reader) {
 			continue
 		}
 
-		log.Printf("Dropped Packect from %v to %v ", intToIP(CurrentRecord.Saddr), intToIP(CurrentRecord.Daddr))
+		log.Printf("Dropped Packect from %v to %v ", int2ip(CurrentRecord.Saddr), int2ip(CurrentRecord.Daddr))
 	}
 }
