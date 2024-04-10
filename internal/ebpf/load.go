@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/boratanrikulu/durdur/internal/generated"
+	"github.com/cilium/ebpf/rlimit"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -19,6 +21,7 @@ type EBPF struct {
 
 // New returns a new EBPF.
 func New() *EBPF {
+	rlimit.RemoveMemlock()
 	return &EBPF{
 		XDPObjects: &generated.XDPBpfObjects{},
 		TCObjects:  &generated.TCBpfObjects{},
@@ -27,8 +30,12 @@ func New() *EBPF {
 
 // Load loads pre-compiled eBPF program.
 func (e *EBPF) Load() error {
+	log.Debug("Loading eBPF program")
+
+	log.Debug("Loading XDP eBPF program")
 	spec, err := generated.LoadXDPBpf()
 	if err != nil {
+		log.Errorf("Failed to load XDP eBPF program: %v", err)
 		return fmt.Errorf("load ebpf: %w", err)
 	}
 
@@ -38,7 +45,6 @@ func (e *EBPF) Load() error {
 	for k := range spec.Maps {
 		spec.Maps[k].Pinning = ebpf.PinByName
 	}
-
 	if err := spec.LoadAndAssign(e.XDPObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
 			PinPath: FS,
@@ -47,8 +53,31 @@ func (e *EBPF) Load() error {
 			LogLevel: ebpf.LogLevelInstruction,
 		},
 	}); err != nil {
+		log.Errorf("Failed to load and assign XDP eBPF program: %v", err)
 		return fmt.Errorf("load and assign: %w", err)
 	}
+	log.Debug("Load XDP eBPF program successfully")
+	log.Debug("Loading TC eBPF program")
+	spec, err = generated.LoadTCBpf()
+	if err != nil {
+		log.Errorf("Failed to load TC eBPF program: %v", err)
+		return fmt.Errorf("load ebpf: %w", err)
+	}
+	for k := range spec.Maps {
+		spec.Maps[k].Pinning = ebpf.PinByName
+	}
+	if err := spec.LoadAndAssign(e.TCObjects, &ebpf.CollectionOptions{
+		Maps: ebpf.MapOptions{
+			PinPath: FS,
+		},
+		Programs: ebpf.ProgramOptions{
+			LogLevel: ebpf.LogLevelInstruction,
+		},
+	}); err != nil {
+		log.Errorf("Failed to load and assign TC eBPF program: %v", err)
+		return fmt.Errorf("load and assign: %w", err)
+	}
+	log.Debug("Load TC eBPF program successfully")
 
 	return nil
 }
@@ -66,6 +95,5 @@ func (e *EBPF) Close() error {
 			return err
 		}
 	}
-
 	return nil
 }

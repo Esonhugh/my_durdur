@@ -32,7 +32,7 @@ status-xdp:
 load-tc:
 	tc qdisc add dev eth0 clsact
 # tc qdisc add dev [network-device] clsact
-load-tc: reload-tc
+# load-tc: reload-tc
 reload-tc:
 	tc filter add dev eth0 egress bpf da obj internal/generated/tcbpf_bpfel.o sec tc_durdur_drop
 

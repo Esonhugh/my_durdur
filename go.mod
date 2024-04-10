@@ -7,6 +7,7 @@ toolchain go1.22.1
 require (
 	github.com/cilium/ebpf v0.14.0
 	github.com/frankban/quicktest v1.14.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli/v2 v2.17.1
 )
 

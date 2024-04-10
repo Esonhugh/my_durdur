@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 )
@@ -16,6 +18,7 @@ var (
 
 // Attach loads the eBPF program and attaches it to the kernel.
 func Attach(iface *net.Interface) error {
+	log.Infof("Trying to attach XDP and TC eBPF program to the %v.", iface.Name)
 	e, err := newEBPF()
 	if err != nil {
 		return err
@@ -32,7 +35,6 @@ func (e *EBPF) Attach(iface *net.Interface) error {
 			"%w: %s", ErrAlreadyAttached, iface.Name,
 		)
 	}
-	fmt.Println("trying to attach XDP")
 	l, err := link.AttachXDP(link.XDPOptions{
 		Program:   e.XDPObjects.XdpDurdurDropFunc,
 		Interface: iface.Index,
@@ -67,12 +69,11 @@ func (e *EBPF) LoadAttachedLink() error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", err, ErrAlreadyAttached)
 	}
+	e.XDPLink = l
 	l2, err := link.LoadPinnedLink(e.linkPinnedTCXFile(), &ebpf.LoadPinOptions{})
 	if err != nil {
 		return fmt.Errorf("%s: %w", err, ErrAlreadyAttached)
 	}
-
-	e.XDPLink = l
 	e.TCLink = l2
 	return nil
 }
