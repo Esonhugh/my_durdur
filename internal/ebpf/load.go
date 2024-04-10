@@ -30,55 +30,58 @@ func New() *EBPF {
 
 // Load loads pre-compiled eBPF program.
 func (e *EBPF) Load() error {
-	log.Debug("Loading eBPF program")
-
-	log.Debug("Loading XDP eBPF program")
-	spec, err := generated.LoadXDPBpf()
-	if err != nil {
-		log.Errorf("Failed to load XDP eBPF program: %v", err)
-		return fmt.Errorf("load ebpf: %w", err)
+	log.Debug("Loading eBPF programs")
+	{
+		log.Debug("1. Loading XDP eBPF program")
+		spec, err := generated.LoadXDPBpf()
+		if err != nil {
+			log.Errorf("Failed to load XDP eBPF program: %v", err)
+			return fmt.Errorf("load ebpf: %w", err)
+		}
+		// spec.Maps["drop_to_addrs"].Pinning = ebpf.PinByName
+		// spec.Maps["event_report_area"].Pinning = ebpf.PinByName
+		for k := range spec.Maps {
+			spec.Maps[k].Pinning = ebpf.PinByName
+		}
+		DebugSpec(spec)
+		if err := spec.LoadAndAssign(e.XDPObjects, &ebpf.CollectionOptions{
+			Maps: ebpf.MapOptions{
+				PinPath: FS,
+			},
+			Programs: ebpf.ProgramOptions{
+				LogLevel: ebpf.LogLevelInstruction,
+			},
+		}); err != nil {
+			log.Errorf("Failed to load and assign XDP eBPF program: %v", err)
+			ParseEbpfVerifierError(err)
+			return fmt.Errorf("load and assign: %w", err)
+		}
+		log.Info("Load XDP eBPF program successfully")
 	}
-
-	// spec.Maps["drop_from_addrs"].Pinning = ebpf.PinByName
-	// spec.Maps["drop_to_addrs"].Pinning = ebpf.PinByName
-	// spec.Maps["event_report_area"].Pinning = ebpf.PinByName
-	for k := range spec.Maps {
-		spec.Maps[k].Pinning = ebpf.PinByName
+	{
+		log.Debug("2. Loading TC eBPF program")
+		spec, err := generated.LoadTCBpf()
+		if err != nil {
+			log.Errorf("Failed to load TC eBPF program: %v", err)
+			return fmt.Errorf("load ebpf: %w", err)
+		}
+		for k := range spec.Maps {
+			spec.Maps[k].Pinning = ebpf.PinByName
+		}
+		DebugSpec(spec)
+		if err := spec.LoadAndAssign(e.TCObjects, &ebpf.CollectionOptions{
+			Maps: ebpf.MapOptions{
+				PinPath: FS,
+			},
+			Programs: ebpf.ProgramOptions{
+				LogLevel: ebpf.LogLevelInstruction,
+			},
+		}); err != nil {
+			log.Errorf("Failed to load and assign TC eBPF program: %v", err)
+			return fmt.Errorf("load and assign: %w", err)
+		}
+		log.Info("Load TC eBPF program successfully")
 	}
-	if err := spec.LoadAndAssign(e.XDPObjects, &ebpf.CollectionOptions{
-		Maps: ebpf.MapOptions{
-			PinPath: FS,
-		},
-		Programs: ebpf.ProgramOptions{
-			LogLevel: ebpf.LogLevelInstruction,
-		},
-	}); err != nil {
-		log.Errorf("Failed to load and assign XDP eBPF program: %v", err)
-		return fmt.Errorf("load and assign: %w", err)
-	}
-	log.Debug("Load XDP eBPF program successfully")
-	log.Debug("Loading TC eBPF program")
-	spec, err = generated.LoadTCBpf()
-	if err != nil {
-		log.Errorf("Failed to load TC eBPF program: %v", err)
-		return fmt.Errorf("load ebpf: %w", err)
-	}
-	for k := range spec.Maps {
-		spec.Maps[k].Pinning = ebpf.PinByName
-	}
-	if err := spec.LoadAndAssign(e.TCObjects, &ebpf.CollectionOptions{
-		Maps: ebpf.MapOptions{
-			PinPath: FS,
-		},
-		Programs: ebpf.ProgramOptions{
-			LogLevel: ebpf.LogLevelInstruction,
-		},
-	}); err != nil {
-		log.Errorf("Failed to load and assign TC eBPF program: %v", err)
-		return fmt.Errorf("load and assign: %w", err)
-	}
-	log.Debug("Load TC eBPF program successfully")
-
 	return nil
 }
 

@@ -1,5 +1,5 @@
 CLANG ?= clang
-CFLAGS := -O2 -g -Wall -Werror -I /usr/include/aarch64-linux-gnu $(CFLAGS)
+CFLAGS := -O3 -g -Wall -Werror -I /usr/include/aarch64-linux-gnu $(CFLAGS)
 
 .PHONY: generate compile build build-docker test test-docker
 

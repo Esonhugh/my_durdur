@@ -65,11 +65,3 @@ func (e *EBPF) DeleteToIPAndPort(ip net.IP, port uint16) error {
 		Port: port,
 	})
 }
-
-func (e *EBPF) AddDNSQuery(q DNSQuery) error {
-	return e.XDPObjects.DropDns.Put(q, uint64(0))
-}
-
-func (e *EBPF) DeleteDNSQuery(q DNSQuery) error {
-	return e.XDPObjects.DropDns.Delete(q)
-}

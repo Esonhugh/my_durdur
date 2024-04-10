@@ -21,11 +21,6 @@ typedef struct report_event tc_event;
 UNUSED(tc_event);
 //const tc_event *unused __attribute__((unused));
 
-struct
-{
-	__uint(type, BPF_MAP_TYPE_RINGBUF);
-	__uint(max_entries, 1 << 24);
-} tc_event_report_area SEC(".maps");
 
 struct
 {
@@ -49,12 +44,17 @@ struct
     __uint(max_entries, 1024);
 } drop_to_ipport SEC(".maps");
 
+struct
+{
+	__uint(type, BPF_MAP_TYPE_RINGBUF);
+	__uint(max_entries, 1 << 24);
+} tc_event_report_area SEC(".maps");
 
 SEC("tc_durdur_drop")
 int tc_durdur_drop_func(struct __sk_buff *skb) {
+	tc_event *report;
 	void* data = (void *)(long) skb->data;
 	void* data_end = (void *)(long) skb->data_end;
-	tc_event *report;
 
     if (data + sizeof(struct ethhdr) > data_end) {
         return TC_ACT_SHOT;
