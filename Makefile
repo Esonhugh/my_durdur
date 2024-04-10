@@ -9,7 +9,7 @@ generate:
 	go generate ./internal/generated...
 
 compile:
-	go build -o build/durdur ./cmd/durdur-new
+	go build -o build/durdur ./cmd/durdur-new/main.go
 	# go build -o build/durdur ./cmd/durdur
 
 build: generate compile
@@ -18,6 +18,8 @@ build-docker:
 	docker build -t durdur -f images/Dockerfile .
 
 clean:
+	rm -rf /sys/fs/bpf/*
+	rm -rf build/*
 	rm -rf internal/generated/*bpf_bpfe*.go
 	rm -rf internal/generated/*bpf_bpfe*.o
 

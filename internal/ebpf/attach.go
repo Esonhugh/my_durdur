@@ -42,12 +42,11 @@ func (e *EBPF) Attach(iface *net.Interface) error {
 	if err != nil {
 		return err
 	}
-	if err := l.Pin(e.linkPinFile()); err != nil {
+	if err := l.Pin(e.linkPinnedXDPFile()); err != nil {
 		return err
 	}
 	e.XDPLink = l
 
-	fmt.Println("trying to attach TC")
 	l2, err := link.AttachTCX(link.TCXOptions{
 		Program:   e.TCObjects.TcDurdurDropFunc,
 		Interface: iface.Index,
@@ -65,7 +64,7 @@ func (e *EBPF) Attach(iface *net.Interface) error {
 
 // LoadAttachedLink returns the pinned link from the FS.
 func (e *EBPF) LoadAttachedLink() error {
-	l, err := link.LoadPinnedLink(e.linkPinFile(), &ebpf.LoadPinOptions{})
+	l, err := link.LoadPinnedLink(e.linkPinnedXDPFile(), &ebpf.LoadPinOptions{})
 	if err != nil {
 		return fmt.Errorf("%s: %w", err, ErrAlreadyAttached)
 	}
@@ -78,8 +77,8 @@ func (e *EBPF) LoadAttachedLink() error {
 	return nil
 }
 
-// linkPinFile returns FS file address for the link.
-func (e *EBPF) linkPinFile() string {
+// linkPinnedXDPFile returns FS file address for the link.
+func (e *EBPF) linkPinnedXDPFile() string {
 	return fmt.Sprintf("%s/%s", FS, "xdp_drop_func_link")
 }
 

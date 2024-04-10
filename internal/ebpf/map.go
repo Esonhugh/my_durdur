@@ -90,6 +90,7 @@ type AddDeleter interface {
 }
 
 func (e *EBPF) MapOperation(op Operation, d Direction, ip net.IP, port uint16) error {
+	log.Infof("MapOperation: %s %s %s %d", op, d, ip, port)
 	var addDeleter AddDeleter
 	var data any
 	if d == Ingress {

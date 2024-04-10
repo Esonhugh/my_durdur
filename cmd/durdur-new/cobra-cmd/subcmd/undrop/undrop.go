@@ -18,8 +18,8 @@ var UnDropOpt struct {
 
 func init() {
 	cobra_cmd.RootCmd.AddCommand(UnDropCmd)
-	UnDropCmd.PersistentFlags().BoolVarP(&UnDropOpt.SrcDirection, "src", "s", false, "Source direction")
-	UnDropCmd.PersistentFlags().BoolVarP(&UnDropOpt.DstDirection, "dst", "d", false, "Destination direction")
+	UnDropCmd.PersistentFlags().BoolVar(&UnDropOpt.SrcDirection, "src", false, "Source direction")
+	UnDropCmd.PersistentFlags().BoolVar(&UnDropOpt.DstDirection, "dst", false, "Destination direction")
 	UnDropCmd.PersistentFlags().StringVarP(&UnDropOpt.IP, "ip", "i", "1.1.1.1", "IP address")
 	UnDropCmd.PersistentFlags().Uint16VarP(&UnDropOpt.Port, "port", "p", 0, "Port number")
 }
@@ -29,7 +29,7 @@ var UnDropCmd = &cobra.Command{
 	Short: "Add new IP/port to the maps.",
 	Long:  `Add new IP/port to the maps.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if UnDropOpt.SrcDirection != UnDropOpt.DstDirection {
+		if UnDropOpt.SrcDirection == UnDropOpt.DstDirection {
 			return errors.New("you can't specify both src and dst directions or none of them")
 		}
 		var d ebpf.Direction

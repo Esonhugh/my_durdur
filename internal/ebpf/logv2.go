@@ -43,6 +43,7 @@ func DropLogV2() error {
 		EndlessLoopReadTCRecords(rd, nil)
 	}
 	time.Sleep(1 * time.Second)
+	defer close(Records)
 	for r := range Records {
 		fmt.Fprintf(os.Stdout, "Dropped Packect from %v:%d to %v:%d ", r.Saddr, r.Sport, r.Daddr, r.Dport)
 	}

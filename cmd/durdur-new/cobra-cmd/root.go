@@ -4,7 +4,6 @@ import (
 	"github.com/boratanrikulu/durdur/internal/ebpf"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	easy "github.com/t-tomalak/logrus-easy-formatter"
 )
 
 var (
@@ -32,9 +31,6 @@ var RootCmd = &cobra.Command{
 }
 
 func Exec() {
-	log.SetFormatter(&easy.Formatter{
-		LogFormat: "%msg%",
-	})
 	if err := RootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-package durdur_new
+package main
 
 import (
 	cmd "github.com/boratanrikulu/durdur/cmd/durdur-new/cobra-cmd"
