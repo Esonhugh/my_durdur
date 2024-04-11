@@ -5,6 +5,7 @@ import (
 	_ "github.com/boratanrikulu/durdur/cmd/durdur-new/cobra-cmd/subcmd/attach"
 	_ "github.com/boratanrikulu/durdur/cmd/durdur-new/cobra-cmd/subcmd/detach"
 	_ "github.com/boratanrikulu/durdur/cmd/durdur-new/cobra-cmd/subcmd/drop"
+	_ "github.com/boratanrikulu/durdur/cmd/durdur-new/cobra-cmd/subcmd/list"
 	_ "github.com/boratanrikulu/durdur/cmd/durdur-new/cobra-cmd/subcmd/log"
 	_ "github.com/boratanrikulu/durdur/cmd/durdur-new/cobra-cmd/subcmd/undrop"
 )
