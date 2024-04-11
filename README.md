@@ -12,38 +12,116 @@ Build and use `build/durdur` binary.
 make build
 ```
 
-## How to use
+## How to Use
 
-Run all commands via **root privileges**.  
+```shell
+# ./build/durdur help   
+Durdur is a L4 package Dropper/Firewall.
 
-1. Attach the program to BPFFS.
-```sh
-durdur attach --interface wlp3s0
+Usage:
+  durdur [command]
+
+Available Commands:
+  attach      Attaches the program to the network.
+  completion  Generate the autocompletion script for the specified shell
+  detach      Detaches the program from the network.
+  drop        Add new IP/port to the maps.
+  help        Help about any command
+  list        List all the rules
+  log         print logs of dropping data
+  undrop      Add new IP/port to the maps.
+
+Flags:
+  -b, --bpffs string   mounted bpffs location (default "/sys/fs/bpf")
+  -d, --debug          Enable debug mode
+  -h, --help           help for durdur
+
+Use "durdur [command] --help" for more information about a command.
 ```
 
-2. Add rules. You can use `to` or `from` params.
-```sh
-durdur drop --from "192.0.1.1"
+### Attach to interface
+
+```shell  
+./build/durdur attach -i eth0 -d
+INFO[0000] Trying to attach XDP and TC eBPF program to the eth0. 
+INFO[0000] Load XDP eBPF program successfully           
+INFO[0000] Load TC eBPF program successfully     
 ```
 
-3. Remove rules.
-```sh
-durdur undrop --from "192.0.1.1"
+### Detach from interface
+
+```shell
+./build/durdur detach
+INFO[0000] Load XDP eBPF program successfully           
+INFO[0000] Load TC eBPF program successfully            
+INFO[0000] Detached from the network.     
 ```
 
-4. Detach the program from BPFFS. (Cleans all resources)
-```sh
-durdur detach
+### Add a drop rule
+
+```shell
+# ./build/durdur drop --dst -i 198.19.249.98 -p 8000
+INFO[0000] Load XDP eBPF program successfully           
+INFO[0000] Load TC eBPF program successfully            
+INFO[0000] MapOperation: add dst 198.19.249.98 8000   
+# ./build/durdur drop --dst -i 198.19.249.97        
+INFO[0000] Load XDP eBPF program successfully           
+INFO[0000] Load TC eBPF program successfully            
+INFO[0000] MapOperation: add dst 198.19.249.97 0 
+# ./build/durdur drop --src -i 198.19.249.97
+INFO[0000] Load XDP eBPF program successfully           
+INFO[0000] Load TC eBPF program successfully            
+INFO[0000] MapOperation: add src 198.19.249.97 0  
 ```
 
-5. Log for dropped packet log in realtime.
-```sh
-durdur log
+### List all rules
+
+```shell
+# ./build/durdur list                       
+INFO[0000] Load XDP eBPF program successfully           
+INFO[0000] Load TC eBPF program successfully            
+INFO[0000] --ingress-> world 198.19.249.97:any hint-rule:0 
+INFO[0000] world <-egress-- 198.19.249.97:any hint-rule:0 
+INFO[0000] world <-egress-- 198.19.249.98:8000 hint-rule:0 
 ```
 
-https://user-images.githubusercontent.com/20258973/195852545-0f7578ad-4417-453d-8d64-64a237eca640.mp4
+### Del a drop rule
+
+```shell
+#  ./build/durdur undrop --src -i 198.19.249.97
+INFO[0000] Load XDP eBPF program successfully           
+INFO[0000] Load TC eBPF program successfully            
+INFO[0000] MapOperation: del src 198.19.249.97 0 
+```
+
+### Print logs
+
+```shell
+# ./build/durdur log
+INFO[0000] Load XDP eBPF program successfully           
+INFO[0000] Load TC eBPF program successfully            
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:46279 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:5790 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:5790 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:5790 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:5790 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:5790 to 198.19.249.98:16415 
+Dropped Packect from 198.19.249.193:5790 to 198.19.249.98:16415 
+```
+
 
 ## Copyright
 
 [GPL-3.0 license](https://github.com/boratanrikulu/durdur/blob/main/LICENSE),  
 Copyright 2022 Bora Tanrikulu <[me@bora.sh](mailto:me@bora.sh)>
+Copyright 2024 Esonhugh <[durdur-project@eson.ninja](mailto:durdur-project@eson.ninja)>

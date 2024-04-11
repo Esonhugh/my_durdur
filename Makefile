@@ -63,6 +63,3 @@ dump-maps:
 
 list-prog:
 	bpftool prog |grep 'durdur' -A2 
-
-debug-log:
-	cat /sys/kernel/debug/tracing/trace_pipe|grep "[TC PASS]"
