@@ -21,9 +21,9 @@ func ListRules() error {
 		}
 		var f string
 		if record.D == Egress {
-			record.D = "world <-egress--"
+			record.D = "host -egress-> "
 		} else {
-			record.D = "--ingress-> world"
+			record.D = "world -ingress->"
 		}
 
 		if record.Port == 0 {
@@ -69,7 +69,7 @@ func (e *EBPF) ListMap() []eBPFRecord {
 			if !ok {
 				break
 			}
-			record = append(record, eBPFRecord{D: Ingress, Port: key, Count: value})
+			record = append(record, eBPFRecord{D: Ingress, Port: htons(key), Count: value})
 		}
 	}
 	// DropFromIpport
@@ -82,7 +82,7 @@ func (e *EBPF) ListMap() []eBPFRecord {
 			if !ok {
 				break
 			}
-			record = append(record, eBPFRecord{D: Ingress, IP: int2ip(key.Addr), Port: key.Port, Count: value})
+			record = append(record, eBPFRecord{D: Ingress, IP: int2ip(key.Addr), Port: htons(key.Port), Count: value})
 		}
 	}
 	// DropToAddrs
@@ -108,7 +108,7 @@ func (e *EBPF) ListMap() []eBPFRecord {
 			if !ok {
 				break
 			}
-			record = append(record, eBPFRecord{D: Egress, Port: key, Count: value})
+			record = append(record, eBPFRecord{D: Egress, Port: htons(key), Count: value})
 		}
 	}
 	// DropToIpport
@@ -121,7 +121,7 @@ func (e *EBPF) ListMap() []eBPFRecord {
 			if !ok {
 				break
 			}
-			record = append(record, eBPFRecord{D: Egress, IP: int2ip(key.Addr), Port: key.Port, Count: value})
+			record = append(record, eBPFRecord{D: Egress, IP: int2ip(key.Addr), Port: htons(key.Port), Count: value})
 		}
 	}
 

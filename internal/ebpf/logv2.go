@@ -45,7 +45,7 @@ func DropLogV2() error {
 	time.Sleep(1 * time.Second)
 	defer close(Records)
 	for r := range Records {
-		fmt.Fprintf(os.Stdout, "Dropped Packect from %v:%d to %v:%d \n", r.Saddr, r.Sport, r.Daddr, r.Dport)
+		fmt.Fprintf(os.Stdout, "Dropped Packect from %v:%d to %v:%d \n", r.Saddr, (r.Sport), r.Daddr, r.Dport)
 	}
 	return nil
 }
