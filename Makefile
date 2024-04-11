@@ -22,6 +22,7 @@ clean:
 	rm -rf build/*
 	rm -rf internal/generated/*bpf_bpfe*.go
 	rm -rf internal/generated/*bpf_bpfe*.o
+	ls -al /sys/fs/bpf
 
 load-xdp:
 	ip link set dev eth0 xdp obj internal/generated/xdpbpf_bpfel.o sec xdp_durdur_drop
@@ -59,3 +60,9 @@ dump-maps:
 	bpftool map dump name drop_to_addrs
 	bpftool map dump name drop_to_ports
 	bpftool map dump name drop_to_ipport
+
+list-prog:
+	bpftool prog |grep 'durdur' -A2 
+
+debug-log:
+	cat /sys/kernel/debug/tracing/trace_pipe|grep "[TC PASS]"

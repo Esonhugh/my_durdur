@@ -10,6 +10,9 @@
         "tcp.h": "c",
         "bpf.h": "c",
         "swab.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "types.h": "c",
+        "bpf_helper_defs.h": "c",
+        "bpf_helpers.h": "c"
     }
 }

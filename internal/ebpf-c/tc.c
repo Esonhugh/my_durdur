@@ -50,50 +50,84 @@ struct
 	__uint(max_entries, 1 << 24);
 } tc_event_report_area SEC(".maps");
 
-SEC("tc_durdur_drop")
-int tc_durdur_drop_func(struct __sk_buff *skb) {
-	tc_event *report;
-	void* data = (void *)(long) skb->data;
-	void* data_end = (void *)(long) skb->data_end;
 
-    if (data + sizeof(struct ethhdr) > data_end) {
-        return TC_ACT_SHOT;
+// Attempt to parse the 5-tuple session identifier from the packet.
+// Returns 0 if there is no IPv4 header field or if L4 is not a UDP, TCP or ICMP packet; otherwise returns non-zero.
+static __always_inline int parse_session_identifier(void *data, void *data_end, tc_event *key) {
+	// First, parse the ethernet header.
+	struct ethhdr *eth = data;
+	if ((void *)(eth + 1) > data_end) {
+		return 0;
 	}
 
-	struct ethhdr *eth = data;
-	if (eth->h_proto !=  bpf_htons(ETH_P_IP)) {
+	if (eth->h_proto != bpf_htons(ETH_P_IP)) {
+		// The protocol is not IPv4, so we can't parse an IPv4 source address.
+		return 0;
+	}
+
+	// Then parse the IP header.
+	struct iphdr *ip = (void *)(eth + 1);
+	if ((void *)(ip + 1) > data_end) {
+		return 0;
+	}
+
+	// Then parse the L4 header.
+	switch (ip->protocol) {
+	case IPPROTO_TCP: {
+		// TCP protocol carried, parse TCP header.
+		struct tcphdr *tcp = (void *)(ip + 1);
+		if ((void *)(tcp + 1) > data_end)
+			return 0;
+		key->sport = (__u16)(tcp->source);
+		key->dport = (__u16)(tcp->dest);
+		break;
+	}
+	case IPPROTO_UDP: {
+		// UDP protocol carried, parse TCP header.
+		struct udphdr *udp = (void *)(ip + 1);
+		if ((void *)(udp + 1) > data_end)
+			return 0;
+		key->sport = (__u16)(udp->source);
+		key->dport = (__u16)(udp->dest);
+		break;
+	}
+	case IPPROTO_ICMP: {
+		// ICMP protocol carried, no source/dest port.
+		break;
+	}
+	// Unchecked protocols, ignore them
+	default: {
+		return 0;
+	}
+	}
+
+	// Fill session key with IP header data
+	key->saddr = (__u32)(ip->saddr);
+	key->daddr = (__u32)(ip->daddr);
+	return 1;
+}
+
+SEC("tc_durdur_drop")
+int tc_durdur_drop_func(struct __sk_buff *skb) {
+	tc_event report = {};
+	tc_event *report_addr;
+	void* data = (void *)(long) skb->data;
+	void* data_end = (void *)(long) skb->data_end;
+    
+	if (!parse_session_identifier(data, data_end, &report)) {
 		return TC_ACT_OK;
 	}
 
-    if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) > data_end) {
-        return TC_ACT_OK;
-    }
-	// on Egress
-    struct iphdr *ip = data + sizeof(struct ethhdr);
-	__u32 saddr = ip->daddr;
-	__u16 sport = 0;
-	__u32 daddr = ip->saddr;
-	__u16 dport = 0;
-    
-    long *value;
-    struct tcphdr *tcp;
-    if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr) > data_end)
-    {
-            return TC_ACT_OK;
-    }
-    tcp = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
-    sport = tcp->source;
-    dport = tcp->dest;
-    // struct ipport sipport = { saddr, sport };
-    struct ipport dipport = { daddr, dport };
-        
-		value = bpf_map_lookup_elem(&drop_to_addrs, &daddr);
+	long *value;
+		value = bpf_map_lookup_elem(&drop_to_addrs, &report.daddr);
 	    if (value)
 	    {
 		    *value += 1;
 		    goto TC_DROP;
 	    }
-        value = bpf_map_lookup_elem(&drop_to_ports, &dport);
+    
+    struct ipport dipport = { report.daddr, report.dport };
+        value = bpf_map_lookup_elem(&drop_to_ports, &report.dport);
         if (value)
         {
             *value += 1;
@@ -110,17 +144,17 @@ int tc_durdur_drop_func(struct __sk_buff *skb) {
 	return TC_ACT_OK;
 	
 TC_DROP:
-	report = bpf_ringbuf_reserve(&tc_event_report_area, sizeof(tc_event), 0);
+	report_addr = bpf_ringbuf_reserve(&tc_event_report_area, sizeof(tc_event), 0);
 	// bpf_printk("Reporting");
-	if (!report)
+	if (!report_addr)
 	{
 		// bpf_printk("Report Error");
 		return TC_ACT_SHOT;
 	}
-	report->saddr = saddr;
-	report->sport = sport;
-	report->daddr = daddr;
-	report->dport = dport;
-	bpf_ringbuf_submit(report, BPF_RB_FORCE_WAKEUP);
+	report_addr->saddr = report.saddr;
+	report_addr->sport = report.sport;
+	report_addr->daddr = report.daddr;
+	report_addr->dport = report.dport;
+	bpf_ringbuf_submit(report_addr, BPF_RB_FORCE_WAKEUP);
 	return TC_ACT_SHOT;
 }

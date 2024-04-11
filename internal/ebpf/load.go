@@ -78,6 +78,7 @@ func (e *EBPF) Load() error {
 			},
 		}); err != nil {
 			log.Errorf("Failed to load and assign TC eBPF program: %v", err)
+			ParseEbpfVerifierError(err)
 			return fmt.Errorf("load and assign: %w", err)
 		}
 		log.Info("Load TC eBPF program successfully")
