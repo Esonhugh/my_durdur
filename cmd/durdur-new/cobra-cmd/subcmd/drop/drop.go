@@ -20,7 +20,7 @@ func init() {
 	cobra_cmd.RootCmd.AddCommand(DropCmd)
 	DropCmd.PersistentFlags().BoolVar(&DropOpt.SrcDirection, "src", false, "Source direction")
 	DropCmd.PersistentFlags().BoolVar(&DropOpt.DstDirection, "dst", false, "Destination direction")
-	DropCmd.PersistentFlags().StringVarP(&DropOpt.IP, "ip", "i", "1.1.1.1", "IP address")
+	DropCmd.PersistentFlags().StringVarP(&DropOpt.IP, "ip", "i", "", "IP address")
 	DropCmd.PersistentFlags().Uint16VarP(&DropOpt.Port, "port", "p", 0, "Port number")
 }
 
@@ -38,10 +38,10 @@ var DropCmd = &cobra.Command{
 		} else {
 			d = ebpf.Egress
 		}
-		ipv4 := net.ParseIP(DropOpt.IP)
-		if ipv4 == nil {
-			return errors.New("invalid ip address")
+		if DropOpt.IP == "" {
+
 		}
+		ipv4 := net.ParseIP(DropOpt.IP)
 		return ebpf.DropV2(d, ipv4, DropOpt.Port)
 	},
 }
