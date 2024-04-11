@@ -118,7 +118,7 @@ int tc_durdur_drop_func(struct __sk_buff *skb) {
 		return TC_ACT_OK;
 	}
 
-	long *value;
+		long *value;
 		value = bpf_map_lookup_elem(&drop_to_addrs, &report.daddr);
 	    if (value)
 	    {
@@ -126,13 +126,14 @@ int tc_durdur_drop_func(struct __sk_buff *skb) {
 		    goto TC_DROP;
 	    }
     
-    struct ipport dipport = { report.daddr, report.dport };
         value = bpf_map_lookup_elem(&drop_to_ports, &report.dport);
         if (value)
         {
             *value += 1;
             goto TC_DROP;
         }
+    	
+		struct ipport dipport = { report.daddr, report.dport };
         value = bpf_map_lookup_elem(&drop_to_ipport, &dipport);
         if (value)
         {

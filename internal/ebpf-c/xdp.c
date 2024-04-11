@@ -30,47 +30,48 @@ struct
 } drop_from_addrs SEC(".maps");
 struct
 {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, __u16);
-    __type(value, long);
-    __uint(max_entries, 65535);
+	__uint(type, BPF_MAP_TYPE_HASH);
+	__type(key, __u16);
+	__type(value, long);
+	__uint(max_entries, 65535);
 } drop_from_ports SEC(".maps");
 struct
 {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __uint(key_size, sizeof(xdp_ipport));
-    __uint(value_size, sizeof(long));
-    __uint(max_entries, 1024);
+	__uint(type, BPF_MAP_TYPE_HASH);
+	__uint(key_size, sizeof(xdp_ipport));
+	__uint(value_size, sizeof(long));
+	__uint(max_entries, 1024);
 } drop_from_ipport SEC(".maps");
 
 struct
 {
 	__uint(type, BPF_MAP_TYPE_RINGBUF);
-	__uint(max_entries, 1<< 24);
+	__uint(max_entries, 1 << 24);
 } xdp_event_report_area SEC(".maps");
-
 
 SEC("xdp_durdur_dpop") // Ingress
 int xdp_durdur_drop_func(struct xdp_md *ctx)
 {
 	xdp_event *report;
-    void *data = (void *)(long)ctx->data;
-    void *data_end = (void *)(long)ctx->data_end;
+	void *data = (void *)(long)ctx->data;
+	void *data_end = (void *)(long)ctx->data_end;
 
-	if (data + sizeof(struct ethhdr) > data_end ) {
+	if (data + sizeof(struct ethhdr) > data_end)
+	{
 		return XDP_PASS;
 	}
 	// not ip packet
-    struct ethhdr *eth = data;
-    if (eth->h_proto != bpf_htons(ETH_P_IP)) {
-    		return XDP_PASS;
-    }
-    if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) > data_end)
-    {
-    		return XDP_PASS;
-    }
+	struct ethhdr *eth = data;
+	if (eth->h_proto != bpf_htons(ETH_P_IP))
+	{
+		return XDP_PASS;
+	}
+	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) > data_end)
+	{
+		return XDP_PASS;
+	}
 
-    struct iphdr *ip = data + sizeof(struct ethhdr);
+	struct iphdr *ip = data + sizeof(struct ethhdr);
 	__u32 saddr = ip->saddr;
 	__u16 sport = 0;
 	__u32 daddr = ip->daddr;
@@ -78,40 +79,56 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
 
 	// Drop IP First
 	{
-        long *value;
-	    value = bpf_map_lookup_elem(&drop_from_addrs, &saddr);
-	    if (value)
-	    {
-		    *value += 1;
-		    goto DROPPER;
-	    }
+		long *value;
+		value = bpf_map_lookup_elem(&drop_from_addrs, &saddr);
+		if (value)
+		{
+			*value += 1;
+			goto DROPPER;
+		}
 	}
-    // Drop TCP ports and ports + ip
+	// Drop TCP ports and ports + ip
 	{
-				
-    	long *value;
-        if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr) > data_end)
-        {
-            return XDP_PASS;
-        }
-        struct tcphdr *tcp;
-        tcp = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
-        sport = tcp->source;
-        dport = tcp->dest;
-        struct ipport sipport = { saddr, sport };
-        // struct ipport dipport = { daddr, dport };
-        value = bpf_map_lookup_elem(&drop_from_ports, &sport);
-        if (value)
-        {
-            *value += 1;
-            goto DROPPER;
-        }
-        value = bpf_map_lookup_elem(&drop_from_ipport, &sipport);
-        if (value)
-        {
-            *value += 1;
-            goto DROPPER;
-        }
+		switch (ip->protocol)
+		{
+		case IPPROTO_UDP:
+			if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct udphdr) > data_end)
+			{
+				return XDP_PASS;
+			}
+			struct udphdr *udp = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
+			sport = udp->source;
+			dport = udp->dest;
+			/* code */
+			break;
+		case IPPROTO_TCP:
+			if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr) > data_end)
+			{
+				return XDP_PASS;
+			}
+			struct tcphdr *tcp;
+			tcp = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
+			sport = tcp->source;
+			dport = tcp->dest;
+			break;
+		default:
+			break;
+		}
+		long *value;
+		value = bpf_map_lookup_elem(&drop_from_ports, &sport);
+		if (value)
+		{
+			*value += 1;
+			goto DROPPER;
+		}
+		struct ipport sipport = {saddr, sport};
+		// struct ipport dipport = { daddr, dport };
+		value = bpf_map_lookup_elem(&drop_from_ipport, &sipport);
+		if (value)
+		{
+			*value += 1;
+			goto DROPPER;
+		}
 	}
 	return XDP_PASS;
 
@@ -127,7 +144,7 @@ DROPPER:
 	report->sport = sport;
 	report->daddr = daddr;
 	report->dport = dport;
-	
+
 	bpf_ringbuf_submit(report, BPF_RB_FORCE_WAKEUP);
 	return XDP_DROP;
 }

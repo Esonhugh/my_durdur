@@ -1,5 +1,5 @@
 CLANG ?= clang
-CFLAGS := -O3 -g -Wall -Werror -I /usr/include/aarch64-linux-gnu $(CFLAGS)
+CFLAGS := -O3 -g -Wall -Werror -I /usr/include/aarch64-linux-gnu -I /usr/include/x86_64-linux-gnu $(CFLAGS)
 
 .PHONY: generate compile build build-docker test test-docker
 
@@ -63,3 +63,7 @@ dump-maps:
 
 list-prog:
 	bpftool prog |grep 'durdur' -A2 
+
+kali-x86_64:
+	apt install libc6-dev-i386 libbpf-dev llvm 
+	apt-get install --reinstall libc6-dev
