@@ -39,9 +39,6 @@ var UnDropCmd = &cobra.Command{
 			d = ebpf.Egress
 		}
 		ipv4 := net.ParseIP(UnDropOpt.IP)
-		if ipv4 == nil {
-			return errors.New("invalid ip address")
-		}
 		return ebpf.UndropV2(d, ipv4, UnDropOpt.Port)
 	},
 }

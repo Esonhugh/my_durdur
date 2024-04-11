@@ -45,7 +45,7 @@ func DropLogV2() error {
 	time.Sleep(1 * time.Second)
 	defer close(Records)
 	for r := range Records {
-		fmt.Fprintf(os.Stdout, "Dropped Packect from %v:%d to %v:%d \n", r.Saddr, (r.Sport), r.Daddr, r.Dport)
+		fmt.Fprintf(os.Stdout, "Dropped Packect from %v:%d to %v:%d \n", r.Saddr, r.Sport, r.Daddr, r.Dport)
 	}
 	return nil
 }
@@ -75,10 +75,12 @@ func EndlessLoopReadXDPRecords(rd *ringbuf.Reader, outChan chan<- UniversalRecor
 				log.Printf("parsing ringbuf event: %s", err)
 				continue
 			}
+			CurrentRecord.Sport = htons(CurrentRecord.Sport)
+			CurrentRecord.Dport = htons(CurrentRecord.Dport)
 			outChan <- UniversalRecord{
-				Saddr: int2ip(CurrentRecord.Saddr),
+				Saddr: int2ipL(CurrentRecord.Saddr),
 				Sport: CurrentRecord.Sport,
-				Daddr: int2ip(CurrentRecord.Daddr),
+				Daddr: int2ipL(CurrentRecord.Daddr),
 				Dport: CurrentRecord.Dport,
 			}
 		}
@@ -103,10 +105,12 @@ func EndlessLoopReadTCRecords(rd *ringbuf.Reader, outChan chan<- UniversalRecord
 				log.Printf("parsing ringbuf event: %s", err)
 				continue
 			}
+			CurrentRecord.Sport = htons(CurrentRecord.Sport)
+			CurrentRecord.Dport = htons(CurrentRecord.Dport)
 			outChan <- UniversalRecord{
-				Saddr: int2ip(CurrentRecord.Saddr),
+				Saddr: int2ipL(CurrentRecord.Saddr),
 				Sport: CurrentRecord.Sport,
-				Daddr: int2ip(CurrentRecord.Daddr),
+				Daddr: int2ipL(CurrentRecord.Daddr),
 				Dport: CurrentRecord.Dport,
 			}
 		}

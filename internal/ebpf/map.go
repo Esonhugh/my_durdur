@@ -38,7 +38,7 @@ func (e *EBPF) MapOperation(op Operation, d Direction, ip net.IP, port uint16) e
 		if ip != nil && port != 0 {
 			addDeleter = ingress.DropFromIpport
 			data = XDPIPPort{
-				Addr: ip2intL(ip),
+				Addr: ip2int(ip),
 				Port: port,
 			}
 		} else if ip != nil && port == 0 {
@@ -54,7 +54,7 @@ func (e *EBPF) MapOperation(op Operation, d Direction, ip net.IP, port uint16) e
 		if ip != nil && port != 0 {
 			addDeleter = egress.DropToIpport
 			data = TCIPPort{
-				Addr: ip2intL(ip),
+				Addr: ip2int(ip),
 				Port: port,
 			}
 		} else if ip != nil && port == 0 {
