@@ -1,5 +1,18 @@
 {
     "files.associations": {
-        "libbpf_common.h": "c"
+        "*.yaml": "yaml",
+        "libbpf_common.h": "c",
+        "if_ether.h": "c",
+        "tc_bpf.h": "c",
+        "pkt_cls.h": "c",
+        "inet.h": "c",
+        "ip.h": "c",
+        "tcp.h": "c",
+        "bpf.h": "c",
+        "swab.h": "c",
+        "string.h": "c",
+        "types.h": "c",
+        "bpf_helper_defs.h": "c",
+        "bpf_helpers.h": "c"
     }
 }

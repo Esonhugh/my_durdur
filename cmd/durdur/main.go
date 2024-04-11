@@ -1,11 +1,16 @@
 package main
 
 import (
-	"log"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/urfave/cli/v2"
 )
+
+func init() {
+
+}
 
 func main() {
 	app := &cli.App{
@@ -19,7 +24,7 @@ func main() {
 			LogCmd(),
 		},
 	}
-
+	log.SetLevel(log.TraceLevel)
 	if err := app.Run(os.Args); err != nil {
 		log.Fatalln(err)
 	}

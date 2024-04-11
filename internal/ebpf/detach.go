@@ -1,7 +1,9 @@
 package ebpf
 
 import (
+	"errors"
 	"fmt"
+	"os"
 )
 
 // Detach detaches all pinned objects from the FS.
@@ -10,40 +12,49 @@ func Detach() error {
 	if err != nil {
 		return err
 	}
-	defer e.Close()
 
+	if os.Remove(e.linkPinnedXDPFile()) != nil {
+		return fmt.Errorf("failed to remove XDP pinned file")
+	}
+
+	if os.Remove(e.linkPinnedTCXFile()) != nil {
+		return fmt.Errorf("failed to remove TC pinned file")
+	}
 	return e.Detach()
+}
+
+type UnpinCloser interface {
+	Unpin() error
+	Close() error
+}
+
+func Unpin(e UnpinCloser) error {
+	if err := e.Unpin(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func Close(e UnpinCloser) error {
+	if err := e.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Detach unpins and closes FS and maps.
 func (e *EBPF) Detach() error {
-	if err := e.L.Unpin(); err != nil {
-		return fmt.Errorf("detach the link: %w", err)
-	}
-
-	if err := e.L.Close(); err != nil {
-		return fmt.Errorf("close the link: %w", err)
-	}
-
-	if err := e.Objects.BpfMaps.DropFromAddrs.Unpin(); err != nil {
-		return fmt.Errorf("detach %s map: %w",
-			e.Objects.BpfMaps.DropFromAddrs.String(), err)
-	}
-
-	if err := e.Objects.BpfMaps.DropFromAddrs.Close(); err != nil {
-		return fmt.Errorf("detach %s map: %w",
-			e.Objects.BpfMaps.DropFromAddrs.String(), err)
-	}
-
-	if err := e.Objects.BpfMaps.DropToAddrs.Unpin(); err != nil {
-		return fmt.Errorf("close %s map: %w",
-			e.Objects.BpfMaps.DropToAddrs.String(), err)
-	}
-
-	if err := e.Objects.BpfMaps.DropToAddrs.Close(); err != nil {
-		return fmt.Errorf("close %s map: %w",
-			e.Objects.BpfMaps.DropToAddrs.String(), err)
-	}
-
-	return nil
+	return errors.Join(
+		Unpin(e.XDPObjects.XdpDurdurDropFunc),
+		Unpin(e.TCObjects.TcDurdurDropFunc),
+		Unpin(e.XDPObjects.DropFromAddrs),
+		Unpin(e.XDPObjects.DropFromPorts),
+		Unpin(e.XDPObjects.DropFromIpport),
+		Unpin(e.TCObjects.DropToAddrs),
+		Unpin(e.TCObjects.DropToPorts),
+		Unpin(e.TCObjects.DropToIpport),
+		Unpin(e.XDPObjects.XdpEventReportArea),
+		Unpin(e.TCObjects.TcEventReportArea),
+		e.Close(),
+	)
 }
