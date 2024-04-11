@@ -22,9 +22,9 @@ type XDPBpfXdpEvent struct {
 }
 
 type XDPBpfXdpIpport struct {
-	Addr uint32
-	Port uint16
-	_    [2]byte
+	Addr  uint32
+	Port  uint16
+	Trash uint16
 }
 
 // LoadXDPBpf returns the embedded CollectionSpec for XDPBpf.

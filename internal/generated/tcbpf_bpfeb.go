@@ -22,9 +22,9 @@ type TCBpfTcEvent struct {
 }
 
 type TCBpfTcIpport struct {
-	Addr uint32
-	Port uint16
-	_    [2]byte
+	Addr  uint32
+	Port  uint16
+	Trash uint16
 }
 
 // LoadTCBpf returns the embedded CollectionSpec for TCBpf.

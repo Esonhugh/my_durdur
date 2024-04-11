@@ -82,7 +82,7 @@ func (e *EBPF) ListMap() []eBPFRecord {
 			if !ok {
 				break
 			}
-			record = append(record, eBPFRecord{D: Ingress, IP: int2ip(key.Addr), Port: htons(key.Port), Count: value})
+			record = append(record, eBPFRecord{D: Ingress, IP: int2ipL(key.Addr), Port: htons(key.Port), Count: value})
 		}
 	}
 	// DropToAddrs
@@ -121,7 +121,7 @@ func (e *EBPF) ListMap() []eBPFRecord {
 			if !ok {
 				break
 			}
-			record = append(record, eBPFRecord{D: Egress, IP: int2ip(key.Addr), Port: htons(key.Port), Count: value})
+			record = append(record, eBPFRecord{D: Egress, IP: int2ipL(key.Addr), Port: htons(key.Port), Count: value})
 		}
 	}
 

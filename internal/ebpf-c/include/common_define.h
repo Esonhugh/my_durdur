@@ -10,6 +10,7 @@ struct ipport
 {
     __u32 addr;
     __u16 port;
+	__u16 trash;
 };
 UNUSED_STRUCT(ipport);
 //const struct ipport *unused_ipport __attribute__((unused));
