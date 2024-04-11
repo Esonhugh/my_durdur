@@ -6,7 +6,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var jsonOutput bool
+
 func init() {
+	ListCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "json output")
 	cobra_cmd.RootCmd.AddCommand(ListCmd)
 }
 
@@ -15,6 +18,6 @@ var ListCmd = &cobra.Command{
 	Short: "List all the rules",
 	Long:  `List all the rules`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return ebpf.ListRules()
+		return ebpf.ListRules(jsonOutput)
 	},
 }

@@ -1,13 +1,16 @@
 package ebpf
 
 import (
+	js "encoding/json"
 	"fmt"
 	"net"
+	"os"
 
+	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 )
 
-func ListRules() error {
+func ListRules(json bool) error {
 	e, err := newEBPFWithLink()
 	if err != nil {
 		return err
@@ -15,32 +18,74 @@ func ListRules() error {
 	defer e.Close()
 
 	records := e.ListMap()
+	if len(records) == 0 {
+		log.Infof("No rules attached")
+		return nil
+	}
+
+	if json {
+		b, e := js.Marshal(records)
+		fmt.Printf(string(b))
+		return e
+	}
+
+	fmt.Fprintf(os.Stdout, "\n")
+	t := &Table{
+		Header: []string{"source", "direction-and-type", "target"},
+		Body:   make([][]string, 0),
+	}
 	for _, record := range records {
 		if record.IP == nil {
 			record.IP = net.IPv4zero
 		}
-		var f string
-		if record.D == Egress {
-			record.D = "host -egress-> "
-		} else {
-			record.D = "world -ingress->"
-		}
 
 		if record.Port == 0 {
-			f = fmt.Sprintf("%v %v:any hint-rule:%v", record.D, record.IP, record.Count)
+			record.rPort = "any"
 		} else {
-			f = fmt.Sprintf("%v %v:%v hint-rule:%v", record.D, record.IP, record.Port, record.Count)
+			record.rPort = fmt.Sprintf("%v", record.Port)
 		}
-		log.Info(f)
+
+		if record.D == Egress {
+			t.Body = append(t.Body, []string{
+				// "host:any", "---X-(egress)-X--->", fmt.Sprintf("%v:%v", record.IP, record.rPort),
+				fmt.Sprintf("%v:%v", record.IP, record.rPort), "<---X-(egress)-X---", "host:any",
+			})
+		} else {
+			t.Body = append(t.Body, []string{
+				fmt.Sprintf("%v:any", record.IP), "---X-(ingress)-X--->", fmt.Sprintf("host:%v", record.rPort),
+			})
+		}
 	}
+	t.Print()
 	return nil
 }
 
+type Table struct {
+	Header []string
+	Body   [][]string
+}
+
+func (t Table) Print() {
+	newTable := tablewriter.NewWriter(os.Stdout)
+	newTable.SetAutoMergeCells(false)
+	newTable.SetRowLine(false)
+	newTable.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	newTable.SetAlignment(tablewriter.ALIGN_LEFT)
+	newTable.SetBorder(false)
+	newTable.SetRowSeparator("")
+	newTable.SetColumnSeparator("")
+	newTable.SetHeaderLine(false)
+	newTable.SetHeader(t.Header)
+	newTable.AppendBulk(t.Body)
+	newTable.Render()
+}
+
 type eBPFRecord struct {
-	D     Direction
-	IP    net.IP
-	Port  uint16
-	Count uint64
+	D     Direction `json:"direction"`
+	IP    net.IP    `json:"ip"`
+	Port  uint16    `json:"port"`
+	rPort string
+	Count uint64 `json:"hit-rule"`
 }
 
 func (e *EBPF) ListMap() []eBPFRecord {
