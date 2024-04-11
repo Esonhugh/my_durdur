@@ -88,7 +88,7 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
 	}
     // Drop TCP ports and ports + ip
 	{
-
+				
     	long *value;
         if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr) > data_end)
         {

@@ -43,28 +43,28 @@ func (e *EBPF) DeleteToPort(port uint16) error {
 
 func (e *EBPF) AddFromIPAndPort(ip net.IP, port uint16) error {
 	return e.XDPObjects.DropFromIpport.Put(XDPIPPort{
-		Addr: ip2int(ip),
+		Addr: ip2intL(ip),
 		Port: port,
 	}, uint64(0))
 }
 
 func (e *EBPF) DeleteFromIPAndPort(ip net.IP, port uint16) error {
 	return e.XDPObjects.DropFromIpport.Delete(XDPIPPort{
-		Addr: ip2int(ip),
+		Addr: ip2intL(ip),
 		Port: port,
 	})
 }
 
 func (e *EBPF) AddToIPAndPort(ip net.IP, port uint16) error {
 	return e.TCObjects.DropToIpport.Put(TCIPPort{
-		Addr: ip2int(ip),
+		Addr: ip2intL(ip),
 		Port: port,
 	}, uint64(0))
 }
 
 func (e *EBPF) DeleteToIPAndPort(ip net.IP, port uint16) error {
 	return e.TCObjects.DropToIpport.Delete(TCIPPort{
-		Addr: ip2int(ip),
+		Addr: ip2intL(ip),
 		Port: port,
 	})
 }
@@ -99,7 +99,7 @@ func (e *EBPF) MapOperation(op Operation, d Direction, ip net.IP, port uint16) e
 		if ip != nil && port != 0 {
 			addDeleter = ingress.DropFromIpport
 			data = XDPIPPort{
-				Addr: ip2int(ip),
+				Addr: ip2intL(ip),
 				Port: port,
 			}
 		} else if ip != nil && port == 0 {
@@ -115,7 +115,7 @@ func (e *EBPF) MapOperation(op Operation, d Direction, ip net.IP, port uint16) e
 		if ip != nil && port != 0 {
 			addDeleter = egress.DropToIpport
 			data = TCIPPort{
-				Addr: ip2int(ip),
+				Addr: ip2intL(ip),
 				Port: port,
 			}
 		} else if ip != nil && port == 0 {

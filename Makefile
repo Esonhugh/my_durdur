@@ -51,3 +51,11 @@ test:
 test-docker:
 	docker build -t durdur-test -q -f images/Dockerfile.tests . && \
 	docker run --rm --privileged -v /sys/fs/bpf:/sys/fs/bpf durdur-test
+
+dump-maps:
+	bpftool map dump name drop_from_addrs
+	bpftool map dump name drop_from_ports
+	bpftool map dump name drop_from_ippor
+	bpftool map dump name drop_to_addrs
+	bpftool map dump name drop_to_ports
+	bpftool map dump name drop_to_ipport
