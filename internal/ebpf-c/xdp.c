@@ -115,13 +115,13 @@ int xdp_durdur_drop_func(struct xdp_md *ctx)
 			break;
 		}
 		long *value;
-		value = bpf_map_lookup_elem(&drop_from_ports, &sport);
+		value = bpf_map_lookup_elem(&drop_from_ports, &dport);
 		if (value)
 		{
 			*value += 1;
 			goto DROPPER;
 		}
-		struct ipport sipport = {saddr, sport};
+		struct ipport sipport = {saddr, dport};
 		// struct ipport dipport = { daddr, dport };
 		value = bpf_map_lookup_elem(&drop_from_ipport, &sipport);
 		if (value)
