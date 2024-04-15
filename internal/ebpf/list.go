@@ -20,18 +20,21 @@ func ListRules(json bool) error {
 	records := e.ListMap()
 	if len(records) == 0 {
 		log.Infof("No rules attached")
-		return nil
 	}
 
 	if json {
+		if len(records) == 0 {
+			fmt.Fprintf(os.Stdout, "[]")
+			return nil
+		}
 		b, e := js.Marshal(records)
-		fmt.Printf(string(b))
+		fmt.Fprintf(os.Stdout, string(b))
 		return e
 	}
 
 	fmt.Fprintf(os.Stdout, "\n")
 	t := &Table{
-		Header: []string{"source", "direction-and-type", "target"},
+		Header: []string{"source", "direction-and-type", "target", "count of breaching"},
 		Body:   make([][]string, 0),
 	}
 	for _, record := range records {
@@ -48,11 +51,11 @@ func ListRules(json bool) error {
 		if record.D == Egress {
 			t.Body = append(t.Body, []string{
 				// "host:any", "---X-(egress)-X--->", fmt.Sprintf("%v:%v", record.IP, record.rPort),
-				fmt.Sprintf("%v:%v", record.IP, record.rPort), "<---X-(egress)-X---", "host:any",
+				fmt.Sprintf("%v:%v", record.IP, record.rPort), "<---X-(egress)-X---", "host:any", fmt.Sprintf("%v", record.Count),
 			})
 		} else {
 			t.Body = append(t.Body, []string{
-				fmt.Sprintf("%v:any", record.IP), "---X-(ingress)-X--->", fmt.Sprintf("host:%v", record.rPort),
+				fmt.Sprintf("%v:any", record.IP), "---X-(ingress)-X--->", fmt.Sprintf("host:%v", record.rPort), fmt.Sprintf("%v", record.Count),
 			})
 		}
 	}
