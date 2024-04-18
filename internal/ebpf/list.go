@@ -88,7 +88,7 @@ type eBPFRecord struct {
 	IP    net.IP    `json:"ip"`
 	Port  uint16    `json:"port"`
 	rPort string
-	Count uint64 `json:"hit-rule"`
+	Count uint64 `json:"hit_rule"`
 }
 
 func (e *EBPF) ListMap() []eBPFRecord {
